@@ -1,0 +1,45 @@
+logging:
+  level: info
+
+processors:
+  - timestamp:
+      field: timestamp
+      layouts:
+        - '2006-01-02T15:04:05Z'
+        - '2006-01-02T15:04:05.999Z'
+  - drop_fields:
+      # Remove timestamp because used as reference
+      # Remove user because of conflict issues
+      fields: [timestamp]
+
+# List of prospectors to fetch data.
+filebeat.inputs:
+  # Each - is an input. Most options can be set at the input level, so
+  # you can use different inputs for various configurations.
+
+  - type: log
+    paths:
+      - /var/log/games/data.*.log
+    json:
+      keys_under_root: true
+      overwrite_keys: true
+      add_error_key: true
+    fields:
+      log_type: "game_scores"
+      profile: ${ENVIRONMENT:dev}
+
+output:
+  elasticsearch:
+    hosts: '${ELASTICSEARCH_HOSTS:elasticsearch:9200}'
+    username: '${ELASTICSEARCH_USERNAME:elastic}'
+    password: '${ELASTICSEARCH_PASSWORD:changeme}'
+    index: "%{[fields.profile]}-%{[fields.log_type]}-%{+YYYY.MM}"
+#  console:
+#    pretty: true
+
+setup:
+  template:
+    enbled: true
+    name: "${ENVIRONMENT:dev}"
+    pattern: "${ENVIRONMENT:dev}-*"
+  ilm.enabled: false
